@@ -63,7 +63,7 @@ func generateResizedImage(ctx context.Context, bucket *storage.BucketHandle, ori
 	writer := bucket.Object(fmt.Sprintf("%dx%d@", width, height) + originalImage.ObjectName()).NewWriter(ctx)
 	defer writer.Close()
 
-	src, _, err := image.Decode(reader)
+	src, err := imaging.Decode(reader, imaging.AutoOrientation(true))
 	if err != nil {
 		return errors.Wrap(err, "failed to decode original image")
 	}
