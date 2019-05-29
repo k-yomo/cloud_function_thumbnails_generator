@@ -31,15 +31,20 @@ func init() {
 }
 
 func GenerateThumbnails(ctx context.Context, e GCSEvent) error {
-	if !shouldGenerateThumbnails(e.Name) {
+	bucket := storageClient.Bucket(e.Bucket)
+	obj := bucket.Object(e.Name)
+	attrs, err := obj.Attrs(ctx)
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("failed to get attrs of %s", e.Name))
+	}
+
+	if !shouldGenerateThumbnails(obj.ObjectName(), attrs.ContentType) {
 		return nil
 	}
 
-	bucket := storageClient.Bucket(e.Bucket)
-
 	thumbnailSizes := []int{100, 500, 1000}
 	for _, size := range thumbnailSizes {
-		if err := generateResizedImage(ctx, bucket, e.Name, size, size); err != nil {
+		if err := generateResizedImage(ctx, bucket, obj, size, size); err != nil {
 			return errors.Wrap(err, fmt.Sprintf("failed to generate thumbnails for %s", e.Name))
 		}
 	}
@@ -49,13 +54,13 @@ func GenerateThumbnails(ctx context.Context, e GCSEvent) error {
 	return nil
 }
 
-func generateResizedImage(ctx context.Context, bucket *storage.BucketHandle, originalImageName string, width, height int) error {
-	reader, err := bucket.Object(originalImageName).NewReader(ctx)
+func generateResizedImage(ctx context.Context, bucket *storage.BucketHandle, originalImage *storage.ObjectHandle, width, height int) error {
+	reader, err := originalImage.NewReader(ctx)
 	if err != nil {
 		return errors.Wrap(err, "failed to read image")
 	}
 
-	writer := bucket.Object(fmt.Sprintf("%dx%d@", width, height) + originalImageName).NewWriter(ctx)
+	writer := bucket.Object(fmt.Sprintf("%dx%d@", width, height) + originalImage.ObjectName()).NewWriter(ctx)
 	defer writer.Close()
 
 	src, _, err := image.Decode(reader)
@@ -77,9 +82,8 @@ func generateResizedImage(ctx context.Context, bucket *storage.BucketHandle, ori
 	return nil
 }
 
-func shouldGenerateThumbnails(fileName string) bool {
-	resizable, _ := regexp.MatchString("(jpg|jpeg|png)$", fileName)
-	if !resizable {
+func shouldGenerateThumbnails(fileName string, contentType string) bool {
+	if !(contentType == "image/jpeg" || contentType == "image/png") {
 		log.Printf("%q is not image", fileName)
 		return false
 	}
