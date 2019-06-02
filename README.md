@@ -1,9 +1,17 @@
 # Cloud Function Thumbnails Generator
-Generate 100x100, 500x500, 1000x1000 thumbnails triggered by uploading image to the target bucket.
+- `GenerateThumbnails` function will generate 100x100, 500x500, 1000x1000 thumbnails triggered by uploading image to the target bucket.
+- `DeleteThumbnails` function will delete generated thumbnails when original image gets deleted. 
 
 ## Deploy
+- `GenerateThumbnails`
 ```
+cd functions/generate_thumbnails
 gcloud functions deploy GenerateThumbnails --runtime go111 --trigger-resource BUCKET_NAME --trigger-event google.storage.object.finalize
+```
+- `DeleteThumbnails`
+```
+cd functions/delete_thumbnails
+gcloud functions deploy DeleteThumbnails --runtime go111 --trigger-resource BUCKET_NAME --trigger-event google.storage.object.delete
 ```
 
 ## Example
