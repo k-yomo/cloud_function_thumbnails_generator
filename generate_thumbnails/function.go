@@ -1,4 +1,4 @@
-package function
+package generate_thumbnails
 
 import (
 	"bytes"
@@ -19,7 +19,8 @@ var (
 
 type GCSEvent struct {
 	Bucket string `json:"bucket"`
-	Name   string `json:"name"`
+	ObjectName   string `json:"name"`
+	ContentType   string `json:"contentType"`
 }
 
 func init() {
@@ -31,25 +32,20 @@ func init() {
 }
 
 func GenerateThumbnails(ctx context.Context, e GCSEvent) error {
-	bucket := storageClient.Bucket(e.Bucket)
-	obj := bucket.Object(e.Name)
-	attrs, err := obj.Attrs(ctx)
-	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("failed to get attrs of %s", e.Name))
-	}
-
-	if !shouldGenerateThumbnails(obj.ObjectName(), attrs.ContentType) {
+	if !shouldGenerateThumbnails(e.ObjectName, e.ContentType) {
 		return nil
 	}
 
+	bucket := storageClient.Bucket(e.Bucket)
+	obj := bucket.Object(e.ObjectName)
 	thumbnailSizes := []int{100, 500, 1000}
 	for _, size := range thumbnailSizes {
 		if err := generateResizedImage(ctx, bucket, obj, size, size); err != nil {
-			return errors.Wrap(err, fmt.Sprintf("failed to generate thumbnails for %s", e.Name))
+			return errors.Wrap(err, fmt.Sprintf("failed to generate thumbnails for %q", e.ObjectName))
 		}
 	}
 
-	log.Printf("thumbnails for %s have been generated", e.Name)
+	log.Printf("thumbnails for %q have been generated", e.ObjectName)
 
 	return nil
 }
@@ -88,8 +84,8 @@ func shouldGenerateThumbnails(fileName string, contentType string) bool {
 		return false
 	}
 
-	resized, _ := regexp.MatchString("^[0-9]+x[0-9]+@", fileName)
-	if resized {
+	resizedImage, _ := regexp.MatchString("^[0-9]+x[0-9]+@", fileName)
+	if resizedImage {
 		log.Printf("%q is already resized", fileName)
 		return false
 	}
