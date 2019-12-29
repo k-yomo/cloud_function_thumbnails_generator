@@ -13,25 +13,18 @@ import (
 	"regexp"
 )
 
-var (
-	storageClient *storage.Client
-)
-
 type GCSEvent struct {
 	Bucket string `json:"bucket"`
 	ObjectName   string `json:"name"`
 	ContentType   string `json:"contentType"`
 }
 
-func init() {
-	var err error
-	storageClient, err = storage.NewClient(context.Background())
+func GenerateThumbnails(ctx context.Context, e GCSEvent) error {
+	storageClient, err := storage.NewClient(context.Background())
 	if err != nil {
 		log.Fatalf("failed to init storage client: %v", err)
 	}
-}
 
-func GenerateThumbnails(ctx context.Context, e GCSEvent) error {
 	if !shouldGenerateThumbnails(e.ObjectName, e.ContentType) {
 		return nil
 	}
@@ -70,8 +63,7 @@ func generateResizedImage(ctx context.Context, bucket *storage.BucketHandle, ori
 		return errors.Wrap(err, fmt.Sprintf("failed to encode %dx%d thumbnail image", width, height))
 	}
 
-	_, err = writer.Write(buff.Bytes())
-	if err != nil {
+	if _, err = writer.Write(buff.Bytes()); err != nil {
 		return errors.Wrap(err, "failed to write resized image")
 	}
 

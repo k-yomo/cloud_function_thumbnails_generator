@@ -9,25 +9,18 @@ import (
 	"regexp"
 )
 
-var (
-	storageClient *storage.Client
-)
-
 type GCSEvent struct {
 	Bucket string `json:"bucket"`
 	ObjectName   string `json:"name"`
 	ContentType   string `json:"contentType"`
 }
 
-func init() {
-	var err error
-	storageClient, err = storage.NewClient(context.Background())
+func DeleteThumbnails(ctx context.Context, e GCSEvent) error {
+	storageClient, err := storage.NewClient(context.Background())
 	if err != nil {
 		log.Fatalf("failed to init storage client: %v", err)
 	}
-}
 
-func DeleteThumbnails(ctx context.Context, e GCSEvent) error {
 	bucket := storageClient.Bucket(e.Bucket)
 	if !shouldDeleteThumbnails(e.ObjectName, e.ContentType) {
 		return nil
