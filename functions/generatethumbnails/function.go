@@ -1,4 +1,4 @@
-package generate_thumbnails
+package generatethumbnails
 
 import (
 	"bytes"
@@ -14,13 +14,14 @@ import (
 	"github.com/pkg/errors"
 )
 
-type GCSEvent struct {
+type gcsEvent struct {
 	Bucket      string `json:"bucket"`
 	ObjectName  string `json:"name"`
 	ContentType string `json:"contentType"`
 }
 
-func GenerateThumbnails(ctx context.Context, e GCSEvent) error {
+// GenerateThumbnails generates 100px, 500px and 1000px thumbnails for the uploaded image
+func GenerateThumbnails(ctx context.Context, e gcsEvent) error {
 	gcsClient, err := storage.NewClient(ctx)
 	if err != nil {
 		log.Fatalf("failed to init storage client: %v", err)

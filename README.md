@@ -1,4 +1,8 @@
 # Cloud Function Thumbnails Generator
+
+![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
+[![Go Report Card](https://goreportcard.com/badge/k-yomo/cloud_function_thumbnails_generator)](https://goreportcard.com/report/k-yomo/cloud_function_thumbnails_generator)
+
 - `GenerateThumbnails` function will generate 100x100, 500x500, 1000x1000 thumbnails triggered by uploading image to the target bucket.
 - `DeleteThumbnails` function will delete generated thumbnails when original image gets deleted. 
 

@@ -1,4 +1,4 @@
-package delete_thumbnails
+package deletethumbnails
 
 import (
 	"context"
@@ -10,13 +10,14 @@ import (
 	"github.com/pkg/errors"
 )
 
-type GCSEvent struct {
+type gcsEvent struct {
 	Bucket      string `json:"bucket"`
 	ObjectName  string `json:"name"`
 	ContentType string `json:"contentType"`
 }
 
-func DeleteThumbnails(ctx context.Context, e GCSEvent) error {
+// DeleteThumbnails deletes generated thumbnails
+func DeleteThumbnails(ctx context.Context, e gcsEvent) error {
 	gcsClient, err := storage.NewClient(ctx)
 	if err != nil {
 		log.Fatalf("failed to init storage client: %v", err)
