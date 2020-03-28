@@ -2,25 +2,26 @@ package generate_thumbnails
 
 import (
 	"bytes"
-	"cloud.google.com/go/storage"
 	"context"
 	"fmt"
-	"github.com/disintegration/imaging"
-	"github.com/pkg/errors"
 	"image"
 	"image/jpeg"
 	"log"
 	"regexp"
+
+	"cloud.google.com/go/storage"
+	"github.com/disintegration/imaging"
+	"github.com/pkg/errors"
 )
 
 type GCSEvent struct {
-	Bucket string `json:"bucket"`
-	ObjectName   string `json:"name"`
-	ContentType   string `json:"contentType"`
+	Bucket      string `json:"bucket"`
+	ObjectName  string `json:"name"`
+	ContentType string `json:"contentType"`
 }
 
 func GenerateThumbnails(ctx context.Context, e GCSEvent) error {
-	storageClient, err := storage.NewClient(context.Background())
+	gcsClient, err := storage.NewClient(ctx)
 	if err != nil {
 		log.Fatalf("failed to init storage client: %v", err)
 	}
@@ -29,12 +30,12 @@ func GenerateThumbnails(ctx context.Context, e GCSEvent) error {
 		return nil
 	}
 
-	bucket := storageClient.Bucket(e.Bucket)
+	bucket := gcsClient.Bucket(e.Bucket)
 	obj := bucket.Object(e.ObjectName)
 	thumbnailSizes := []int{100, 500, 1000}
 	for _, size := range thumbnailSizes {
 		if err := generateResizedImage(ctx, bucket, obj, size, size); err != nil {
-			return errors.Wrap(err, fmt.Sprintf("failed to generate thumbnails for %q", e.ObjectName))
+			return errors.Wrapf(err, "failed to generate thumbnails for %q", e.ObjectName)
 		}
 	}
 
@@ -49,7 +50,8 @@ func generateResizedImage(ctx context.Context, bucket *storage.BucketHandle, ori
 		return errors.Wrap(err, "failed to read image")
 	}
 
-	writer := bucket.Object(fmt.Sprintf("%dx%d@", width, height) + originalImage.ObjectName()).NewWriter(ctx)
+	objName := fmt.Sprintf("%dx%d@%s", width, height, originalImage.ObjectName())
+	writer := bucket.Object(objName).NewWriter(ctx)
 	defer writer.Close()
 
 	src, err := imaging.Decode(reader, imaging.AutoOrientation(true))
@@ -60,7 +62,7 @@ func generateResizedImage(ctx context.Context, bucket *storage.BucketHandle, ori
 	img := imaging.Thumbnail(src, width, height, imaging.Lanczos)
 	buff, err := encodeToJpeg(img)
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("failed to encode %dx%d thumbnail image", width, height))
+		return errors.Wrapf(err, "failed to encode %dx%d thumbnail image", width, height)
 	}
 
 	if _, err = writer.Write(buff.Bytes()); err != nil {

@@ -1,27 +1,28 @@
 package delete_thumbnails
 
 import (
-	"cloud.google.com/go/storage"
 	"context"
 	"fmt"
-	"github.com/pkg/errors"
 	"log"
 	"regexp"
+
+	"cloud.google.com/go/storage"
+	"github.com/pkg/errors"
 )
 
 type GCSEvent struct {
-	Bucket string `json:"bucket"`
-	ObjectName   string `json:"name"`
-	ContentType   string `json:"contentType"`
+	Bucket      string `json:"bucket"`
+	ObjectName  string `json:"name"`
+	ContentType string `json:"contentType"`
 }
 
 func DeleteThumbnails(ctx context.Context, e GCSEvent) error {
-	storageClient, err := storage.NewClient(context.Background())
+	gcsClient, err := storage.NewClient(ctx)
 	if err != nil {
 		log.Fatalf("failed to init storage client: %v", err)
 	}
 
-	bucket := storageClient.Bucket(e.Bucket)
+	bucket := gcsClient.Bucket(e.Bucket)
 	if !shouldDeleteThumbnails(e.ObjectName, e.ContentType) {
 		return nil
 	}
@@ -29,7 +30,7 @@ func DeleteThumbnails(ctx context.Context, e GCSEvent) error {
 	thumbnailSizes := []int{100, 500, 1000}
 	for _, size := range thumbnailSizes {
 		if err := deleteThumbnail(ctx, bucket, e.ObjectName, size, size); err != nil {
-			return errors.Wrap(err, fmt.Sprintf("failed to generate thumbnails for %q", e.ObjectName))
+			return errors.Wrapf(err, "failed to generate thumbnails for %q", e.ObjectName)
 		}
 	}
 
